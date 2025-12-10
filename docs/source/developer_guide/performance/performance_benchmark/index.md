@@ -7,5 +7,4 @@ This document details the performance testing methods for vllm-kunlun and the an
 :maxdepth: 1
 benchmark_server
 benchmark_kernel
-profiling
 :::

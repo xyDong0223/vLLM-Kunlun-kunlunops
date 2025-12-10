@@ -1,21 +1,12 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Adapted from vllm/model_executor/models/interns1_vit.py
-# Copyright 2023 The vLLM team.
-#
-# This file is a part of the vllm-kunlun project.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+# adapted from https://huggingface.co/OpenGVLab/InternVL2-4B/blob/main/modeling_intern_vit.py
+# --------------------------------------------------------
+# InternVL
+# Copyright (c) 2023 OpenGVLab
+# Licensed under The MIT License [see LICENSE for details]
+# --------------------------------------------------------
 from collections.abc import Iterable
 from typing import Optional
 
@@ -26,6 +17,7 @@ from transformers import PretrainedConfig
 from transformers.utils import torch_int
 
 from vllm.model_executor.layers.activation import get_act_fn
+# from vllm_kunlun.ops.activation import GeluAndMul
 from vllm.model_executor.layers.layernorm import RMSNorm
 from vllm.model_executor.layers.linear import (ColumnParallelLinear,
                                                RowParallelLinear)
@@ -253,6 +245,7 @@ class InternS1VisionMLP(nn.Module):
 
         self.config = config
         self.activation_fn = get_act_fn(config.hidden_act)
+        # self.activation_fn = GeluAndMul()
         self.fc1 = ColumnParallelLinear(config.hidden_size,
                                         config.intermediate_size,
                                         bias=True,

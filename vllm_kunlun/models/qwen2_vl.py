@@ -1,9 +1,16 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Adapted from vllm/model_executor/models/qwen2vl.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+# Adapted from
+# https://github.com/huggingface/transformers/blob/19e6e80e10118f855137b90740936c0b11ac397f/src/transformers/models/qwen2_vl/modeling_qwen2_vl.py
+# Copyright 2024 The Qwen team.
 # Copyright 2023 The vLLM team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
-# This file is a part of the vllm-kunlun project.
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +45,7 @@ from vllm.config import VllmConfig
 from vllm.distributed import parallel_state, tensor_model_parallel_all_gather
 from vllm.distributed import utils as dist_utils
 from vllm.logger import init_logger
-from vllm.model_executor import SamplingMetadata
+# from vllm.model_executor import SamplingMetadata
 from vllm.model_executor.layers.activation import QuickGELU
 from vllm.model_executor.layers.linear import (ColumnParallelLinear,
                                                RowParallelLinear)
@@ -70,11 +77,12 @@ from vllm.model_executor.models.utils import (AutoWeightsLoader, WeightsMapper,
                     init_vllm_registered_model, maybe_prefix,
                     merge_multimodal_embeddings)
 from vllm.model_executor.models.vision import get_vit_attn_backend
+import xspeedgate_ops
 
 logger = init_logger(__name__)
 
 # For profile run
-_MAX_FRAMES_PER_VIDEO = 16
+_MAX_FRAMES_PER_VIDEO = 14
 
 # === Vision Inputs === #
 
@@ -226,13 +234,10 @@ def apply_rotary_emb_torch(x: torch.Tensor,
 def apply_rotary_pos_emb_vision(t: torch.Tensor,
                                 freqs: torch.Tensor) -> torch.Tensor:
     t_ = t.float()
-
+    
     if freqs.dim() == 3 and freqs.shape[1] == 2:
-        # freqs: (seq_len, 2, head_dim)
-        # Call custom XPU Kernel version
-        import xspeedgate_ops
         return torch.ops.xspeedgate_ops.rope_vit(t_, freqs, interleaved = False).type_as(t)
-
+    
     cos = freqs.cos()
     sin = freqs.sin()
     apply_rotary_emb = apply_rotary_emb_torch
@@ -922,10 +927,10 @@ class Qwen2VLProcessingInfo(BaseProcessingInfo):
             image_processor=None,
         )
 
-    def _get_max_video_frames(self, max_tokens: int) -> int:
+    def _get_max_video_frames(self, max_tokens: int, start_num_frames: int = 1) -> int:
         target_width, target_height = self.get_image_size_with_most_features()
 
-        num_frames = 0
+        num_frames = start_num_frames
 
         while True:
             next_num_frames = num_frames + 1
@@ -947,15 +952,23 @@ class Qwen2VLProcessingInfo(BaseProcessingInfo):
         self,
         seq_len: int,
         mm_counts: Mapping[str, int],
+        max_frames_per_video: int = _MAX_FRAMES_PER_VIDEO,
     ) -> int:
-        max_images = mm_counts.get("image", 0)
+        # max_images = mm_counts.get("image", 0)
+        # max_videos = mm_counts.get("video", 0)
+
+        # max_image_tokens = self.get_max_image_tokens() * max_images
+        # max_total_frames = self._get_max_video_frames(seq_len -
+        #                                               max_image_tokens)
+        # max_frames_per_video = min(max_total_frames // max(max_videos, 1),
+        #                            _MAX_FRAMES_PER_VIDEO)
+
+        # return max(max_frames_per_video, 1)
         max_videos = mm_counts.get("video", 0)
 
-        max_image_tokens = self.get_max_image_tokens() * max_images
-        max_total_frames = self._get_max_video_frames(seq_len -
-                                                      max_image_tokens)
+        max_total_frames = self._get_max_video_frames(seq_len)
         max_frames_per_video = min(max_total_frames // max(max_videos, 1),
-                                   _MAX_FRAMES_PER_VIDEO)
+                                   max_frames_per_video)
 
         return max(max_frames_per_video, 1)
 
@@ -1404,10 +1417,10 @@ class Qwen2VLForConditionalGeneration(nn.Module, SupportsMultiModal,
     def compute_logits(
         self,
         hidden_states: torch.Tensor,
-        sampling_metadata: SamplingMetadata,
+        # sampling_metadata: SamplingMetadata,
     ) -> Optional[torch.Tensor]:
-        return self.language_model.compute_logits(hidden_states,
-                                                  sampling_metadata)
+        return self.language_model.compute_logits(hidden_states)
+                                                #   sampling_metadata)
 
     def load_weights(self, weights: Iterable[tuple[str,
                                                    torch.Tensor]]) -> set[str]:

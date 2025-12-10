@@ -1,4 +1,9 @@
+--index-url https://pip.baidu-int.com/simple/
+--trusted-host pip.baidu.com
+
 setuptools==80.9.0
+opencv-python-headless==4.12.0.88
+llguidance==0.7.11
 black==23.3.0
 blake3==1.0.5
 cachetools==6.1.0
@@ -24,11 +29,10 @@ pydantic==2.11.7
 tokenizers>=0.21.2
 uvloop==0.21.0
 prometheus-fastapi-instrumentator==7.1.0
-transformers>=4.56.1
+transformers==4.57.0
 
+# 基础构建依赖
 hatchling>=1.25
 build>=1.0.3
 pytest
 mock
-
-

@@ -1,29 +1,13 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Copyright 2023 The vLLM team.
-# Author: Dong Xinyu, Chen Zhennan, Bao Qian, Yuan Jizhong
-# Email: dongxinyu03@baidu.com
-# This file is a part of the vllm-kunlun project.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 """layer.py"""
 import torch
+import os
 from typing import Callable, Optional
 
 import vllm.envs as envs
 from vllm.config import get_current_vllm_config
 from vllm.forward_context import ForwardContext, get_forward_context
 from vllm.distributed import get_ep_group
+from vllm.distributed.eplb.eplb_state import EplbState
 
 from vllm.model_executor.layers.fused_moe import FusedMoE as VllmFusedMoE
 from vllm.model_executor.layers.fused_moe import FusedMoEMethodBase as VllmFusedMoEMethodBase
@@ -101,7 +85,6 @@ class UnquantizedFusedMoEMethod(VllmUnquantizedFusedMoEMethod):
     ) -> torch.Tensor:
         """forward_kunlun"""
         from vllm_kunlun.ops._kunlun_ops import KunlunOps as ops
-
         if self.moe.use_ep:
             return ops.fused_moe_ep(x,
                              layer.w13_weight,
@@ -116,6 +99,96 @@ class UnquantizedFusedMoEMethod(VllmUnquantizedFusedMoEMethod):
                              num_expert_group=num_expert_group,
                              topk_group=topk_group
                              )
+        # fused_moe do not support expert number > 400
+        elif layer.local_num_experts > 400:
+            hidden_states = x
+            global_num_experts = linear_weights.shape[0]
+            M, N = hidden_states.shape
+            hidden_dim = layer.w2_weight.shape[1]
+            normed_score = torch.empty(M,
+                                top_k,
+                                dtype=torch.float32,
+                                device=hidden_states.device)
+            topk_ids = torch.empty(M,
+                            top_k,
+                            dtype=torch.int32,
+                            device=hidden_states.device)
+            num_blocks = 12
+            block_statistic = torch.zeros(
+                num_blocks, global_num_experts, dtype=torch.int32, device=hidden_states.device
+            )
+
+            router_logits = router_logits.float()
+            torch.ops._C.moe_softmax_topk_norm(
+                x=router_logits,
+                normed_score=normed_score,
+                topk_index=topk_ids,
+                block_statistic=None,
+                stable=True)
+
+            moe_expand = torch.empty((M * top_k, N), dtype=hidden_states.dtype, device=hidden_states.device) # [M, top_k, N], float
+            expert_m = torch.zeros(global_num_experts, dtype=torch.int32, device=hidden_states.device)             # [E]
+            sorted_tokens_num_lod = torch.zeros(global_num_experts + 1, dtype=torch.int32, device=hidden_states.device)  # [E+1]
+            sorted_tokens_idx = torch.zeros(M * top_k, dtype=torch.int32, device=hidden_states.device)
+
+            torch.ops._C.gen_block_statistic(topk_ids,block_statistic)
+
+            torch.ops._C.moe_pre_sorted(
+                x=hidden_states,
+                topk_index=topk_ids,
+                block_statistic=block_statistic,
+                moe_expand=moe_expand,
+                moe_index=sorted_tokens_idx,
+                expert_m=expert_m,
+                sorted_tokens_num_lod=sorted_tokens_num_lod)
+
+            y = torch.empty(M,top_k,
+                    layer.w13_weight.shape[1],
+                    dtype=hidden_states.dtype,
+                    device=hidden_states.device)
+
+            moe_expand = moe_expand.view(M * top_k, hidden_dim)
+
+            torch.ops._C.moe_fc(
+                x=moe_expand,
+                weight=layer.w13_weight,
+                sorted_tokens_num_lod=sorted_tokens_num_lod,
+                sorted_tokens_idx=sorted_tokens_idx,
+                moe_topk=top_k,
+                y=y)
+
+            d = y.shape[-1] // 2
+            output_shape = (y.shape[:-1] + (d, ))
+            out1 = torch.empty(output_shape, dtype=y.dtype, device=y.device)
+            torch.ops._C.swiglu(y, out1)
+
+            out = torch.empty(M,top_k,
+                    layer.w2_weight.shape[1],
+                    dtype=hidden_states.dtype,
+                    device=hidden_states.device)
+
+            out1 = out1.reshape(-1, out1.shape[-1])
+
+            torch.ops._C.moe_fc(
+                x=out1,
+                weight=layer.w2_weight,
+                sorted_tokens_num_lod=sorted_tokens_num_lod,
+                sorted_tokens_idx=sorted_tokens_idx,
+                moe_topk=top_k,
+                y=out)
+
+            dequant_scale = torch.ones([M, top_k], dtype = torch.float32, device=out.device)
+            output = torch.empty([M, N], dtype=hidden_states.dtype, device=hidden_states.device)
+            sorted_tokens_idx = sorted_tokens_idx.view(M, top_k)
+
+            torch.ops._C.moe_post(
+                x=out,
+                moe_index=sorted_tokens_idx,
+                normed_scale=normed_score,
+                dequant_scale=dequant_scale,
+                y=output
+            )
+            return output
         else:
             return ops.fused_moe(x,
                              layer.w13_weight,
@@ -155,6 +228,7 @@ class FusedMoE(VllmFusedMoE):
         activation: str = "silu",
         enable_eplb: bool = False,
         num_redundant_experts: int = 0,
+        is_sequence_parallel=False,
     ):
         super().__init__(
         num_experts=num_experts,  # Global number of experts
@@ -189,7 +263,7 @@ class FusedMoE(VllmFusedMoE):
             # since model_config is not set in the pytest test.
             model_dtype = params_dtype
 
-        moe = FusedMoEConfig.make(
+        moe = FusedMoEConfig(
             num_experts=self.global_num_experts,
             experts_per_token=top_k,
             hidden_dim=hidden_size,
@@ -197,7 +271,7 @@ class FusedMoE(VllmFusedMoE):
             moe_parallel_config=self.moe_parallel_config,
             in_dtype=model_dtype,
             max_num_tokens=envs.VLLM_MOE_DP_CHUNK_SIZE,
-            quant_config=quant_config,
+            # quant_config=quant_config,
         )
         self.moe_config = moe
         self.quant_config = quant_config
@@ -308,3 +382,34 @@ class FusedMoE(VllmFusedMoE):
                 final_hidden_states)
 
         return final_hidden_states
+    @classmethod
+    def make_expert_params_mapping(
+            cls,
+            ckpt_gate_proj_name: str,
+            ckpt_down_proj_name: str,
+            ckpt_up_proj_name: str,
+            num_experts: int,
+            num_redundant_experts: int = 0) -> list[tuple[str, str, int, str]]:
+
+        num_physical_experts = num_experts + num_redundant_experts
+
+        # In the returned mapping:
+        # - `expert_id` is the physical expert id
+        # - `weight_name` contains the weight name of the logical expert
+        # So that we should map the expert id to logical in `weight_name`
+        physical_to_logical_map = \
+            EplbState.build_initial_global_physical_to_logical_map(
+            num_experts, num_redundant_experts)
+
+        return [
+            # (param_name, weight_name, expert_id, shard_id)
+            ("experts.w13_" if weight_name
+             in [ckpt_gate_proj_name, ckpt_up_proj_name] else "experts.w2_",
+             f"experts.{physical_to_logical_map[expert_id]}.{weight_name}.",
+             expert_id, shard_id) for expert_id in range(num_physical_experts)
+            for shard_id, weight_name in [
+                ("w1", ckpt_gate_proj_name),
+                ("w2", ckpt_down_proj_name),
+                ("w3", ckpt_up_proj_name),
+            ]
+        ]

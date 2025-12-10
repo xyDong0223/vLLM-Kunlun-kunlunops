@@ -1,20 +1,6 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Author: Bao Qian
-# Email: baoqian@baidu.com
-# This file is a part of the vllm-kunlun project.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
 import os
 import sys
 from abc import abstractmethod
@@ -46,7 +32,7 @@ class TorchCompileWrapperWithCustomDispatcher:
     def __init__(self,
                  compiled_callable: Optional[Callable] = None,
                  compilation_level: int = 0):
-        from vllm.config import get_current_vllm_config
+        from vllm.config import get_current_vllm_config, CUDAGraphMode
         vllm_config = get_current_vllm_config()
         self.vllm_config = vllm_config
         if compiled_callable is None:
@@ -61,9 +47,13 @@ class TorchCompileWrapperWithCustomDispatcher:
 
             compiled_callable = torch.compile(
                 self.forward,
-                fullgraph=envs.VLLM_TEST_DYNAMO_FULLGRAPH_CAPTURE,
+                fullgraph=True, #envs.VLLM_TEST_DYNAMO_FULLGRAPH_CAPTURE,
                 backend=backend,
                 options=options)
+            
+        # print(vllm_config.compilation_config)
+        # vllm_config.compilation_config.cudagraph_mode = CUDAGraphMode.PIECEWISE
+        # vllm_config.compilation_config.cudagraph_capture_sizes = [32768] 
 
         self.compiled_callable = compiled_callable
         self.original_code_object = self.__class__.forward.__code__
@@ -126,7 +116,12 @@ class TorchCompileWrapperWithCustomDispatcher:
                                  decompiled_file)
                 except Exception:
                     pass
-
+        # if self.vllm_config.compilation_config.use_cudagraph and \
+        #     "update" in new_code.co_names:
+        #     import depyf
+        #     src = depyf.decompile(new_code)
+        #     msg = "Assigning / modifying buffers of nn.Module during forward pass is not allowed when using cudagraph inside the compiler because it will cause silent errors. Please use eager mode or fix the code. The following code contains clues about which buffer is being modified (please search for the usage of the function `update`):\n" + src  # noqa
+        #     raise RuntimeError(msg)
 
     @contextmanager
     def dispatch_to_code(self, index: int):

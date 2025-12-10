@@ -19,10 +19,11 @@ class KunlunPlatform(Platform):
 
     @property
     def device_type(self):
-        """Returns the device type, which is fixed as 'cuda'.
+        """
+        返回设备类型，固定为'cuda'。
         """
         return "cuda"
-
+    
     def is_kunlun(self) -> bool:
         """is_kunlun"""
         return self._enum == PlatformEnum.CUDA
@@ -69,13 +70,14 @@ class KunlunPlatform(Platform):
 
     @classmethod
     def get_device_name(cls, device_id: int = 0) -> str:
-        """Returns the device name, which defaults to "kunlun".
-
+        """
+            获取设备名称，默认返回 "kunlun"。
+        
         Args:
-            device_id (int, optional): The device ID, default is 0. Ignored in this method. Defaults to 0.
-
+            device_id (int, optional): 设备ID，默认为0. Ignored in this method. Defaults to 0.
+        
         Returns:
-            str: The device name, which is fixed as "kunlun".
+            str: 设备名称，固定返回 "kunlun".
         """
         return "kunlun"
 
@@ -89,23 +91,26 @@ class KunlunPlatform(Platform):
 
     @classmethod
     def get_device_total_memory(cls, device_id: int = 0) -> int:
-        """Returns the total memory size of the device in bytes (B). Defaults to the total memory size of the first device.
-        If the `device_id` parameter is not an integer or exceeds the available device range, a ValueError will be raised.
-
+        """
+            获取设备总内存大小，单位为字节（B）。默认返回第一个设备的总内存大小。
+        如果传入参数`device_id`不是整数或者超出了可用设备范围，将会引发ValueError异常。
+        
         Args:
-            device_id (int, optional): The device ID, default is 0. Defaults to 0.
-
+            device_id (int, optional): 设备ID，默认为0. Defaults to 0.
+        
         Raises:
-            ValueError: If the `device_id` parameter is not an integer or exceeds the available device range, this exception is raised.
-
+            ValueError: 当传入的`device_id`不是整数或者超出了可用设备范围时引发此异常。
+        
         Returns:
-            int: The total memory size of the device in bytes (B).
+            int: 设备总内存大小，单位为字节（B）。
         """
         return psutil.virtual_memory().total
 
     @classmethod
     def inference_mode(cls):
-        """Returns a context manager that disables gradient computation.
+        """
+            进入推理模式，禁止计算梯度。
+        返回：torch.no_grad()，一个上下文管理器，用于禁止计算梯度。
         """
         return torch.no_grad()
 
@@ -114,29 +119,31 @@ class KunlunPlatform(Platform):
         """get_device_capability"""
         major, minor = torch.cuda.get_device_capability()
         return DeviceCapability(major=major, minor=minor)
+    
 
     @classmethod
     def check_and_update_config(cls, vllm_config: "VllmConfig") -> None:
-        """Updates the default values of various components based on the configuration.
-        If not specified, automatically selects the worker class based on certain conditions.
-        If the block size is not set in the cache configuration, it is set to 16.
-        If using MLA and `VLLM_ATTENTION_BACKEND` is not set or is set to "FLASHMLA",
-        the cache block size is set to 64.
-        If running in DeepEP high throughput backend, data parallelism greater than 1, and CUDA graph mode,
-        it forces the use of eager mode, as DP + DeepEP high throughput kernels are not CUDA graph compatible,
-        and using DeepEP low latency kernels can resolve this issue.
-
+        """
+            根据配置更新各个部分的默认值。
+        如果未指定，则根据某些条件自动选择worker类。
+        如果缓存配置中没有设置块大小，则将其设置为16。
+        如果使用MLA，并且`VLLM_ATTENTION_BACKEND`未设置或设置为"FLASHMLA"，
+        则将缓存块大小设置为64。
+        如果在DeepEP高吞吐量后端、数据并行大于1和CUDA图形模式下运行，则强制
+        强制执行即时模式，因为DP + DeepEP高吞吐量内核不是CUDA图形兼容的，而且
+        使用DeepEP低延迟内核可以解决这个问题。
+        
         Args:
-            vllm_config (VllmConfig): VLLM configuration object.
-
+            vllm_config (VllmConfig): VLLM配置对象。
+        
         Raises:
-            NotImplementedError: If multi-step scheduling is used on vLLM V1, this exception is raised.
-            Please remove the --num-scheduler-steps argument from the command line.
-            NotImplementedError: If MLA is used on vLLM V1, this exception is raised.
-            Please ensure that the `VLLM_ATTENTION_BACKEND` environment variable is set before using MLA.
-
+            NotImplementedError: 如果在vLLM V1上使用多步调度，则会引发NotImplementedError。
+            请从命令行中删除--num-scheduler-steps参数。
+            NotImplementedError: 如果在vLLM V1上使用MLA，则会引发NotImplementedError。
+            请确保在使用MLA之前设置了`VLLM_ATTENTION_BACKEND`环境变量。
+        
         Returns:
-            None: No return value.
+            None: 无返回值。
         """
         parallel_config = vllm_config.parallel_config
         scheduler_config = vllm_config.scheduler_config
@@ -159,7 +166,7 @@ class KunlunPlatform(Platform):
                             "vllm.v1.worker.gpu_worker.Worker"
                 else:
                     parallel_config.worker_cls = "vllm.worker.worker.Worker"
-
+        
         cache_config = vllm_config.cache_config
         if cache_config and cache_config.block_size is None:
             cache_config.block_size = 16
@@ -198,9 +205,10 @@ class KunlunPlatform(Platform):
             vllm_config.compilation_config.pass_config.enable_fusion = False
             vllm_config.compilation_config.use_inductor = False
 
+
     @classmethod
     def get_attn_backend_cls(cls, selected_backend, head_size, dtype,
-                             kv_cache_dtype, block_size, use_v1, use_mla,use_sink):
+                             kv_cache_dtype, block_size, use_v1, use_mla,use_sink, use_sparse=False):
         """
             Returns the class of attention backend based on the selected backend and other parameters.
         
@@ -227,15 +235,16 @@ class KunlunPlatform(Platform):
     def get_current_memory_usage(cls,
                                  device: Optional[torch.types.Device] = None
                                  ) -> float:
-        """Gets the current memory usage of the device, including allocated and max allocated.
-        If no device is specified, defaults to the current context's device.
-
-        Args:
-            device (Optional[torch.types.Device], optional): Optional device object, defaults to None. Defaults to the current context's device.
-
-        Returns:
-            float: Returns a float representing the current memory usage of the device, in bytes.
-
+        """
+        获取当前设备的内存使用情况，包括已分配和最大分配。
+            如果未指定设备，则默认为当前上下文中的设备。
+        
+            Args:
+                device (Optional[torch.types.Device], optional): 可选的设备对象，默认为None。默认为当前上下文中的设备。
+        
+            Returns:
+                float: 返回一个浮点数，表示当前设备的内存使用情况，单位是字节（bytes）。
+        
             Raises:
                 None.
         """
@@ -244,17 +253,18 @@ class KunlunPlatform(Platform):
 
     @classmethod
     def is_async_output_supported(cls, enforce_eager: Optional[bool]) -> bool:
-        """Checks if asynchronous output is supported.
-        By default, Kunlun does not support asynchronous output.
-
-        Args:
-            enforce_eager (Optional[bool], optional): Whether to enforce eager execution. Defaults to None.
-                None means not to force eager execution, but to automatically select based on the current environment.
-
-        Returns:
-            bool: True means asynchronous output is supported, False means asynchronous output is not supported.
         """
-        # Assume Kunlun does not support asynchronous output
+            判断是否支持异步输出。
+        默认情况下，Kunlun 不支持异步输出。
+        
+        Args:
+            enforce_eager (Optional[bool], optional): 是否强制使用 eager execution. Defaults to None.
+                None 表示不强制使用 eager execution，而是根据当前环境自动选择。
+        
+        Returns:
+            bool: True 表示支持异步输出，False 表示不支持异步输出。
+        """
+        # 假设 Kunlun 不支持异步输出
         return False
 
     @classmethod
@@ -279,11 +289,42 @@ class KunlunPlatform(Platform):
 
     @classmethod
     def get_device_communicator_cls(cls) -> str:
-        '''
+       '''
        communicator
        '''
-        return "vllm_kunlun.distributed.kunlun_communicator.KunlunCommunicator"
+       return "vllm_kunlun.distributed.kunlun_communicator.KunlunCommunicator"
 
     @classmethod
     def get_punica_wrapper(cls):
-        return "vllm_kunlun.lora.punica_wrapper.punica_kunlun.PunicaWrapperKunlun"
+        return "vllm.lora.punica_wrapper.punica_cpu.PunicaWrapperCPU"
+    
+    @classmethod
+    def check_if_supports_dtype(cls, torch_dtype: torch.dtype):
+        '''
+        Kunlun3平台支持的数据类型
+        '''
+        supported_dtypes = {
+            torch.float32,
+            torch.float16,
+            torch.bfloat16,
+            torch.int8,
+        }
+        if torch_dtype not in supported_dtypes:
+            raise ValueError(
+                f"Kunlun platform does not support dtype {torch_dtype}. "
+                "Supported dtypes are: fp32, fp16, bf16, int8."
+            )
+       
+    def opaque_attention_op(cls) -> bool:
+        '''
+        确保V1 Graph在Kunlun3平台使用vllm.unified_attention_with_output_kunlun作为split ops 
+        '''
+        return True
+    
+    @classmethod
+    def support_hybrid_kv_cache(cls) -> bool:
+        return True
+
+    @classmethod
+    def support_static_graph_mode(cls) -> bool:
+        return True

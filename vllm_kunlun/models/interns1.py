@@ -1,21 +1,11 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Adapted from vllm/model_executor/models/interns1.py
-# Copyright 2023 The vLLM team.
-#
-# This file is a part of the vllm-kunlun project.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+# --------------------------------------------------------
+# InternS1
+# Copyright (c) 2025 Shanghai AI Lab
+# Licensed under The MIT License [see LICENSE for details]
+# --------------------------------------------------------
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Literal, Optional, TypedDict, Union
 
@@ -258,33 +248,39 @@ class InternS1DummyInputsBuilder(BaseDummyInputsBuilder[InternS1ProcessingInfo]
 
         return image_token * num_images + video_token * num_videos
 
+#     def get_dummy_mm_data(
+#         self,
+#         seq_len: int,
+#         mm_counts: Mapping[str, int],
+#     ) -> MultiModalDataDict:
+#         target_width, target_height = \
+#             self.info.get_image_size_with_most_features()
+#         target_num_frames = \
+#                 self.info.get_num_frames_with_most_features(seq_len, mm_counts)
+#         num_images = mm_counts.get("image", 0)
+#         num_videos = mm_counts.get("video", 0)
+
+#         config = self.info.get_hf_config()
+#         image_size_h, image_size_w = config.vision_config.image_size
+
+#         return {
+#             "image":
+#             self._get_dummy_images(width=target_width,
+#                                    height=target_height,
+#                                    num_images=num_images),
+#             "video":
+#             self._get_dummy_videos(width=image_size_w,
+#                                    height=image_size_h,
+#                                    num_frames=target_num_frames,
+#                                    num_videos=num_videos),
+#         }
 
     def get_dummy_mm_data(
         self,
         seq_len: int,
         mm_counts: Mapping[str, int],
     ) -> MultiModalDataDict:
-        """Generates dummy multimodal data on Kunlun3 platform for performance analysis and warmup.
-
-        Retrieves visual resolution based on configuration (defaulting to 224x224) 
-        and generates resized dummy data for images and videos.
-
-        Args:
-            seq_len: Sequence length (unused).
-            mm_counts: A mapping of multimodal type counts, containing "image" 
-                and "video" keys.
-
-        Returns:
-            MultiModalDataDict: A dictionary containing the generated dummy image 
-                and video data, structured as:
-                {
-                    "image": dummy_image_data,
-                    "video": dummy_video_data
-                }
-
-        Author:
-            Dong Xinyu
-        """
+        # 读取配置里的视觉分辨率；若缺省则兜底 224×224
         config = self.info.get_hf_config()
         img_size = getattr(config.vision_config, "image_size", None)
         if isinstance(img_size, (tuple, list)) and len(img_size) == 2:
@@ -292,13 +288,15 @@ class InternS1DummyInputsBuilder(BaseDummyInputsBuilder[InternS1ProcessingInfo]
         else:
             cfg_h, cfg_w = 224, 224
 
+        # 统一缩减：不再使用 “with_most_features”，而是选择较小的安全尺寸
         target_width = min(cfg_w, 224)
         target_height = min(cfg_h, 224)
-        target_num_frames = 1 
+        target_num_frames = 1  # profile/warmup 只造 1 帧即可
 
         num_images = mm_counts.get("image", 0)
         num_videos = mm_counts.get("video", 0)
 
+        # 统一让视频也按缩减后的分辨率生成
         return {
             "image": self._get_dummy_images(
                 width=target_width,

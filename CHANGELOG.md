@@ -1,20 +1,20 @@
 Changelog
-===# Change Chinese to English comments
-The following records all changes worth noting in the project, formatted based on [Keep a Changelog].
+===
+以下记录了项目中所有值得关注的变更内容，其格式基于[Keep a Changelog]。
 
-This project version follows [Semantic Versioning] and [PEP-440].
+本项目版本遵守[Semantic Versioning]和[PEP-440]。
 
 [Unreleased]
 ---
 ### Added
-- This records new content added
+- 这里记录新添加的内容
 ### Changed
-- This records changed content
+- 这里记录变更的内容
 
 0.1.0 - 2025-08-12
 ---
 ### Added
-- Create project
+- 创建项目
 
 
 [Unreleased]: http://icode.baidu.com/repos/baidu/hac-aiacc/vllm-kunlun/merge/0.1.0...master

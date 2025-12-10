@@ -36,4 +36,3 @@
 |  Chenchao Hu   |
 |  Weijie Hong   |
 |   Song Jiang   |
-|   Hongwei Ma   |

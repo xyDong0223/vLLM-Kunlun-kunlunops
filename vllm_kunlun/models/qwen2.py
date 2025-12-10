@@ -1,9 +1,16 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Adapted from vllm/model_executor/models/qwen2.py
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+# Adapted from
+# https://github.com/huggingface/transformers/blob/v4.28.0/src/transformers/models/qwen2/modeling_qwen2.py
+# Copyright 2024 The Qwen team.
 # Copyright 2023 The vLLM team.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
-# This file is a part of the vllm-kunlun project.
+# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
+# and OPT implementations in this library. It has been modified from its
+# original forms to accommodate minor architectural differences compared
+# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +40,7 @@ from vllm.config import CacheConfig, VllmConfig
 from vllm.distributed import get_pp_group, get_tensor_model_parallel_world_size
 from vllm_kunlun.ops.activation import SiluAndMul
 from vllm.model_executor.layers.layernorm import RMSNorm
-from vllm.model_executor.layers.linear import (MergedColumnParallelLinear,
+from vllm_kunlun.ops.linear import (MergedColumnParallelLinear,
                                                QKVParallelLinear,
                                                RowParallelLinear)
 from vllm.model_executor.layers.logits_processor import LogitsProcessor
@@ -44,7 +51,7 @@ from vllm.model_executor.layers.vocab_parallel_embedding import (
 from vllm_kunlun.ops.vocab_parallel_embedding import VocabParallelEmbedding
 from vllm.model_executor.model_loader.weight_utils import (
     default_weight_loader, maybe_remap_kv_scale_name)
-from vllm.model_executor.sampling_metadata import SamplingMetadata
+# from vllm.model_executor.sampling_metadata import SamplingMetadata
 from vllm.sequence import IntermediateTensors
 
 from vllm.model_executor.models.adapters import as_seq_cls_model
@@ -177,7 +184,12 @@ class Qwen2Attention(nn.Module):
     ) -> torch.Tensor:
         qkv, _ = self.qkv_proj(hidden_states)
         q, k, v = qkv.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
-        q, k = self.rotary_emb(positions, q, k)
+        # INTERNVL_3暂时使用环境变量来控制是否使用原生rotary_embedding
+        # 若要修改，可尝试参考 qwen3.py
+        if os.getenv('INTERNVL_3') == "1":
+            q, k = self.rotary_emb.forward_native(positions, q, k)
+        else:
+            q, k = self.rotary_emb(positions, q, k)
         attn_output = self.attn(q, k, v)
         output, _ = self.o_proj(attn_output)
         return output
@@ -295,6 +307,7 @@ class Qwen2Model(nn.Module):
                 ))
 
         self.config = config
+        config = config.get_text_config()
         self.quant_config = quant_config
         self.vocab_size = config.vocab_size
 
@@ -479,10 +492,10 @@ class Qwen2ForCausalLM(nn.Module, SupportsLoRA, SupportsPP):
     def compute_logits(
         self,
         hidden_states: torch.Tensor,
-        sampling_metadata: SamplingMetadata,
+        # sampling_metadata: SamplingMetadata,
     ) -> Optional[torch.Tensor]:
-        logits = self.logits_processor(self.lm_head, hidden_states,
-                                       sampling_metadata)
+        logits = self.logits_processor(self.lm_head, hidden_states,)
+                                    #    sampling_metadata)
         return logits
 
     def load_weights(self, weights: Iterable[tuple[str,

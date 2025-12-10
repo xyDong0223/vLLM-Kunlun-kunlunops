@@ -1,9 +1,7 @@
 # Quickstart
 
 ## Prerequisites
-
 ### Supported Devices
-
 - Kunlun3 P800
 
 ## Setup environment using container
@@ -22,7 +20,7 @@ if [ $XPU_NUM -gt 0 ]; then
     done
     DOCKER_DEVICE_CONFIG="${DOCKER_DEVICE_CONFIG} --device=/dev/xpuctrl:/dev/xpuctrl"
 fi
-export build_image="wjie520/vllm_kunlun:v0.0.1"
+export build_image="xxxxx"
 docker run -itd ${DOCKER_DEVICE_CONFIG} \
     --net=host \
     --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
@@ -34,12 +32,10 @@ docker run -itd ${DOCKER_DEVICE_CONFIG} \
     -w /workspace \
     "$build_image" /bin/bash
 ```
-
 ::::
 :::::
 
 Start docker:
-
 ```bash
 #start
 bash ./rundocker.sh <container_name>
@@ -48,17 +44,15 @@ docker exec -it <container_name> bash
 ```
 
 The default working directory is `/workspace`. With the fully provisioned environment image we provide, you can quickly start developing and running tasks within this directory.
-
 ## Set up system environment
-
 ```
-#Set environment
+#Set environment 
 chmod +x /workspace/vllm-kunlun/setup_env.sh && source /workspace/vllm-kunlun/setup_env.sh
 ```
-
 ## Usage
 
 You can start the service quickly using the script below.
+
 
 :::::{tab-set}
 ::::{tab-item} Offline Batched Inference
@@ -74,49 +68,65 @@ import os
 from vllm import LLM, SamplingParams
 
 def main():
-    model_path = "/models/Qwen3-8B"
 
-    llm_params = {
-        "model": model_path,
-        "tensor_parallel_size": 1,
-        "trust_remote_code": True,
-        "dtype": "float16",
-        "enable_chunked_prefill": False,
-        "distributed_executor_backend": "mp",
-    }
+    model_path = "models/Qwen3-VL-30B-A3B-Instruct"
 
-    llm = LLM(**llm_params)
+    llm = LLM(
+        model=model_path,
+        tokenizer=model_path,
+        tensor_parallel_size=1,
+        trust_remote_code=True,
+        dtype="float16",
+        distributed_executor_backend="mp",
+        max_model_len=32768,
+        gpu_memory_utilization=0.9,
+        block_size=128,
+        max_num_seqs=128,
+        max_num_batched_tokens=32768,
+        enable_prefix_caching=False,
+        enable_chunked_prefill=False,
+        served_model_name="Qwen3-VL",
+        compilation_config={
+            "splitting_ops": [
+                "vllm.unified_attention",
+                "vllm.unified_attention_with_output",
+                "vllm.unified_attention_with_output_kunlun",
+                "vllm.mamba_mixer2",
+                "vllm.mamba_mixer",
+                "vllm.short_conv",
+                "vllm.linear_attention",
+                "vllm.plamo2_mamba_mixer",
+                "vllm.gdn_attention",
+                "vllm.sparse_attn_indexer",
+            ]
+        },
+    )
 
+    # === test chat ===
     messages = [
         {
             "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": "What is your name?"
-                }
-            ]
+            "content": [{"type": "text", "text": "Hello, what can you do?"}]
         }
     ]
 
-    sampling_params = SamplingParams(
+    sampling = SamplingParams(
         max_tokens=200,
-        temperature=1.0,
+        temperature=0.8,
         top_k=50,
         top_p=1.0,
-        stop_token_ids=[181896]
     )
 
-    outputs = llm.chat(messages, sampling_params=sampling_params)
+    print("开始推理...")
+    outputs = llm.chat(messages, sampling_params=sampling)
 
-    response = outputs[0].outputs[0].text
-    print("=" * 50)
-    print("Input content:", messages)
-    print("Model response:\n", response)
-    print("=" * 50)
+    print("模型输出：\n")
+    print(outputs[0].outputs[0].text)
+
 
 if __name__ == "__main__":
     main()
+
 ```
 
 ::::
@@ -125,7 +135,7 @@ if __name__ == "__main__":
 
 vLLM can also be deployed as a server that implements the OpenAI API protocol. Run
 the following command to start the vLLM server with the
-[Qwen3-8B]model:
+[Qwen3-VL-30B-A3B-Instruct]model:
 
 <!-- tests/e2e/doctest/001-quickstart-test.sh should be considered updating as well -->
 
@@ -133,7 +143,7 @@ the following command to start the vLLM server with the
 python -m vllm.entrypoints.openai.api_server \
       --host 0.0.0.0 \
       --port 8356 \
-      --model /models/Qwen3-8B\
+      --model models/Qwen3-VL-30B-A3B-Instruct \
       --gpu-memory-utilization 0.9 \
       --trust-remote-code \
       --max-model-len 32768 \
@@ -141,15 +151,21 @@ python -m vllm.entrypoints.openai.api_server \
       --dtype float16 \
       --max_num_seqs 128 \
       --max_num_batched_tokens 32768 \
-      --max-seq-len-to-capture 32768 \
       --block-size 128 \
       --no-enable-prefix-caching \
       --no-enable-chunked-prefill \
       --distributed-executor-backend mp \
-      --served-model-name Qwen3-8B \
-      --compilation-config '{"splitting_ops": ["vllm.unified_attention_with_output_kunlun",
-            "vllm.unified_attention", "vllm.unified_attention_with_output",
-            "vllm.mamba_mixer2"]}' \
+      --served-model-name Qwen3-VL-30B-A3B-Instruct \
+      --compilation-config '{"splitting_ops": ["vllm.unified_attention", 
+                                                "vllm.unified_attention_with_output",
+                                                "vllm.unified_attention_with_output_kunlun",
+                                                "vllm.mamba_mixer2", 
+                                                "vllm.mamba_mixer", 
+                                                "vllm.short_conv", 
+                                                "vllm.linear_attention", 
+                                                "vllm.plamo2_mamba_mixer", 
+                                                "vllm.gdn_attention", 
+                                                "vllm.sparse_attn_indexer"]}' \  
 ```
 
 If you see a log as below:
@@ -166,12 +182,14 @@ Congratulations, you have successfully started the vLLM server!
 You can query the model with input prompts:
 
 ```bash
-curl http://localhost:8356/v1/completions \
+curl http://localhost:8356/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-        "model": "Qwen3-8B",
-        "prompt": "What is your name?",
-        "max_tokens": 7,
+        "model": "Qwen3-VL",
+        "messages": [
+          {"role": "user", "content": "What is your name?"}
+        ],
+        "max_tokens": 200,
         "temperature": 0
       }'
 

@@ -7,6 +7,12 @@ def register_model():
     from .qwen2_5_vl import Qwen2_5_VLForConditionalGeneration #noqa: F401
     from .qwen3 import Qwen3ForCausalLM #noqa: F401
     from .qwen3_moe import Qwen3MoeForCausalLM #noqa: F401
+    from .qwen3_vl import Qwen3VLForConditionalGeneration
+    from .qwen3_vl_moe import Qwen3VLMoeForConditionalGeneration
+    from .qwen3_omni_moe_thinker import Qwen3OmniMoeThinkerForConditionalGeneration
+    # from .llama4 import Llama4ForCausalLM #noqa: F401
+    # from .mllama4 import Llama4ForConditionalGeneration #noqa: F401
+    # from .deepseek_v2 import KunlunDeepseekV2MoE
     
     # ModelRegistry.register_model(
     #     "DemoModel",
@@ -27,6 +33,10 @@ def register_model():
     ModelRegistry.register_model(
         "Qwen3MoeForCausalLM",
         "vllm_kunlun.models.qwen3_moe:Qwen3MoeForCausalLM")
+
+    ModelRegistry.register_model(
+        "Qwen3NextForCausalLM",
+        "vllm_kunlun.models.qwen3_next:Qwen3NextForCausalLM")
     
     ModelRegistry.register_model(
         "GlmForCausalLM",
@@ -34,7 +44,8 @@ def register_model():
 
     ModelRegistry.register_model(
         "GptOssForCausalLM",
-        "vllm_kunlun.models.gpt_oss:GptOssForCausalLM")   
+        "vllm_kunlun.models.gpt_oss:GptOssForCausalLM")  
+
     ModelRegistry.register_model(
         "InternLM2ForCausalLM",
         "vllm_kunlun.models.internlm2:InternLM2ForCausalLM")   
@@ -52,16 +63,20 @@ def register_model():
         "vllm_kunlun.models.interns1:InternS1ForConditionalGeneration")
     
     ModelRegistry.register_model(
-        "Glm4MoeForCausalLM",
-        "vllm_kunlun.models.glm4_moe:Glm4MoeForCausalLM")
+        "Qwen3VLForConditionalGeneration",
+        "vllm_kunlun.models.qwen3_vl:Qwen3VLForConditionalGeneration")
     
     ModelRegistry.register_model(
-        "Glm4ForCausalLM",
-        "vllm_kunlun.models.glm4:Glm4ForCausalLM")
+        "Qwen3VLMoeForConditionalGeneration",
+        "vllm_kunlun.models.qwen3_vl_moe:Qwen3VLMoeForConditionalGeneration")
 
     ModelRegistry.register_model(
-        "Glm4vForConditionalGeneration",
-        "vllm_kunlun.models.glm4_1v:Glm4vForConditionalGeneration")
+        "Qwen3OmniMoeForConditionalGeneration",
+        "vllm_kunlun.models.qwen3_omni_moe_thinker:Qwen3OmniMoeThinkerForConditionalGeneration")
+
+    ModelRegistry.register_model(
+        "SeedOssForCausalLM",
+        "vllm_kunlun.models.seed_oss:SeedOssForCausalLM")
 
 
 def register_quant_method():

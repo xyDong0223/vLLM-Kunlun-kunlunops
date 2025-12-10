@@ -1,0 +1,221 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, vllm-kunlun team
+# This file is distributed under the same license as the vllm-kunlun
+# package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version:  vllm-kunlun\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-10 16:59+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: ../../source/user_guide/support_matrix/supported_features.md:1
+msgid "Supported Features"
+msgstr ""
+
+#: ../../source/user_guide/support_matrix/supported_features.md:3
+msgid "The feature support principle of vLLM"
+msgstr ""
+
+#~ msgid "Feature Support"
+#~ msgstr "功能支持"
+
+#~ msgid ""
+#~ "The feature support principle of vLLM"
+#~ " Kunlun is: **aligned with the "
+#~ "vLLM**. We are also actively "
+#~ "collaborating with the community to "
+#~ "accelerate support."
+#~ msgstr "vLLM Kunlun 的特性支持原则是：**与 vLLM 保持一致**。我们也在积极与社区合作，加快支持进度。"
+
+#~ msgid ""
+#~ "You can check the [support status "
+#~ "of vLLM V1 Engine][v1_user_guide]. Below "
+#~ "is the feature support status of "
+#~ "vLLM Kunlun:"
+#~ msgstr "你可以查看 [vLLM V1 引擎的支持状态][v1_user_guide]。下面是 vLLM Kunlun 的功能支持情况："
+
+#~ msgid "Feature"
+#~ msgstr "特性"
+
+#~ msgid "vLLM V0 Engine"
+#~ msgstr "vLLM V0 引擎"
+
+#~ msgid "vLLM V1 Engine"
+#~ msgstr "vLLM V1 引擎"
+
+#~ msgid "Next Step"
+#~ msgstr "下一步"
+
+#~ msgid "Chunked Prefill"
+#~ msgstr "分块预填充"
+
+#~ msgid "🟢 Functional"
+#~ msgstr "🟢 功能性"
+
+#~ msgid "Functional, see detail note: [Chunked Prefill][cp]"
+#~ msgstr "功能性，详见说明：[分块预填充][cp]"
+
+#~ msgid "Automatic Prefix Caching"
+#~ msgstr "自动前缀缓存"
+
+#~ msgid "Functional, see detail note: [vllm-kunlun#732][apc]"
+#~ msgstr "可用，请参见详细说明：[vllm-kunlun#732][apc]"
+
+#~ msgid "LoRA"
+#~ msgstr "LoRA"
+
+#~ msgid "[vllm-kunlun#396][multilora], [vllm-kunlun#893][v1 multilora]"
+#~ msgstr "[vllm-kunlun#396][multilora]，[vllm-kunlun#893][v1 multilora]"
+
+#~ msgid "Prompt adapter"
+#~ msgstr "提示适配器"
+
+#~ msgid "🔴 No plan"
+#~ msgstr "🔴 无计划"
+
+#~ msgid "This feature has been deprecated by vllm."
+#~ msgstr "此功能已被 vllm 弃用。"
+
+#~ msgid "Speculative decoding"
+#~ msgstr "猜测式解码"
+
+#~ msgid "Basic support"
+#~ msgstr "基础支持"
+
+#~ msgid "Pooling"
+#~ msgstr "池化"
+
+#~ msgid "🟡 Planned"
+#~ msgstr "🟡 计划中"
+
+#~ msgid "CI needed and adapting more models; V1 support rely on vLLM support."
+#~ msgstr "需要持续集成（CI）并适配更多模型；V1 的支持依赖于 vLLM 的支持。"
+
+#~ msgid "Enc-dec"
+#~ msgstr "Enc-dec（编码-解码）"
+
+#~ msgid "🔴 NO plan"
+#~ msgstr "🔴 没有计划"
+
+#~ msgid "Plan in 2025.06.30"
+#~ msgstr "2025.06.30 的计划"
+
+#~ msgid "Multi Modality"
+#~ msgstr "多模态"
+
+#~ msgid "[Tutorial][multimodal], optimizing and adapting more models"
+#~ msgstr "[教程][multimodal]，优化和适配更多模型"
+
+#~ msgid "LogProbs"
+#~ msgstr "LogProbs"
+
+#~ msgid "CI needed"
+#~ msgstr "需要持续集成（CI）"
+
+#~ msgid "Prompt logProbs"
+#~ msgstr "提示 logProbs"
+
+#~ msgid "Async output"
+#~ msgstr "异步输出"
+
+#~ msgid "Multi step scheduler"
+#~ msgstr "多步调度器"
+
+#~ msgid "🔴 Deprecated"
+#~ msgstr "🔴 已弃用"
+
+#~ msgid "[vllm#8779][v1_rfc], replaced by [vLLM V1 Scheduler][v1_scheduler]"
+#~ msgstr "[vllm#8779][v1_rfc]，已被 [vLLM V1 调度器][v1_scheduler] 替代"
+
+#~ msgid "Best of"
+#~ msgstr "精选"
+
+#~ msgid "[vllm#13361][best_of], CI needed"
+#~ msgstr "[vllm#13361][best_of]，需要持续集成（CI）"
+
+#~ msgid "Beam search"
+#~ msgstr "束搜索"
+
+#~ msgid "Guided Decoding"
+#~ msgstr "引导解码"
+
+#~ msgid "[vllm-kunlun#177][guided_decoding]"
+#~ msgstr "[vllm-kunlun#177][guided_decoding]"
+
+#~ msgid "Tensor Parallel"
+#~ msgstr "张量并行"
+
+#~ msgid "Pipeline Parallel"
+#~ msgstr "流水线并行"
+
+#~ msgid "Expert Parallel"
+#~ msgstr "专家并行"
+
+#~ msgid "CI needed; No plan on V0 support"
+#~ msgstr "需要持续集成；没有支持V0的计划"
+
+#~ msgid "Data Parallel"
+#~ msgstr "数据并行"
+
+#~ msgid "CI needed;  No plan on V0 support"
+#~ msgstr "需要 CI；暂无 V0 支持计划"
+
+#~ msgid "Prefill Decode Disaggregation"
+#~ msgstr "预填充 解码 拆分"
+
+#~ msgid "1P1D available, working on xPyD and V1 support."
+#~ msgstr "1P1D 已可用，正在开发 xPyD 和 V1 支持。"
+
+#~ msgid "Quantization"
+#~ msgstr "量化"
+
+#~ msgid "W8A8 available, CI needed; working on more quantization method support"
+#~ msgstr "W8A8 已可用，需要持续集成（CI）；正在开发对更多量化方法的支持。"
+
+#~ msgid "Graph Mode"
+#~ msgstr "图模式"
+
+#~ msgid "🔵 Experimental"
+#~ msgstr "🔵 实验性"
+
+#~ msgid "Experimental, see detail note: [vllm-kunlun#767][graph_mode]"
+#~ msgstr "实验性功能，详见说明：[vllm-kunlun#767][graph_mode]"
+
+#~ msgid "Sleep Mode"
+#~ msgstr "睡眠模式"
+
+#~ msgid "level=1 available, CI needed, working on V1 support"
+#~ msgstr "level=1 可用，需要CI，正在开发 V1 支持"
+
+#~ msgid "🟢 Functional: Fully operational, with ongoing optimizations."
+#~ msgstr "🟢 功能性：完全可用，正在持续优化中。"
+
+#~ msgid ""
+#~ "🔵 Experimental: Experimental support, "
+#~ "interfaces and functions may change."
+#~ msgstr "🔵 实验性：实验性支持，接口和功能可能会发生变化。"
+
+#~ msgid "🚧 WIP: Under active development, will be supported soon."
+#~ msgstr "🚧 WIP：正在积极开发中，很快将会支持。"
+
+#~ msgid ""
+#~ "🟡 Planned: Scheduled for future "
+#~ "implementation (some may have open "
+#~ "PRs/RFCs)."
+#~ msgstr "🟡 计划中：已安排将来实现（其中一些可能已有开放的PR/RFC）。"
+
+#~ msgid "🔴 NO plan / Deprecated: No plan for V0 or deprecated by vLLM v1."
+#~ msgstr "🔴 没有计划 / 已弃用：V0 没有计划或已被 vLLM v1 弃用。"
+

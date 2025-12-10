@@ -1,0 +1,8 @@
+ARG BASE_IMAGE=iregistry.baidu-int.com/hac_test/aiak-inference-llm:xpu_dev_202508030_v1
+FROM ${BASE_IMAGE}
+
+COPY vllm-kunlun /workspace/vllm-kunlun
+
+RUN bash /workspace/vllm-kunlun/dockerfile/install.sh
+
+WORKDIR /workspace

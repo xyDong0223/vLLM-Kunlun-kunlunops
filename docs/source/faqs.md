@@ -2,7 +2,7 @@
 
 ## Version Specific FAQs
 
-- [[v0.10.1.1] FAQ & Feedback]
+- [[v0.11.0] FAQ & Feedback]
 
 ## General FAQs
 
@@ -20,12 +20,13 @@ We will support the kunlun4 M100 platform in early 2026.
 
 ### 2. How to get our docker containers?
 
-**base**:`docker pull wjie520/vllm_kunlun:v0.0.1`.
+**base**:`docker pull iregistry.baidu-int.com/xmlir/xmlir_ubuntu_2004_x86_64:v0.32`.
 
+**full**:`docker pull wjie520/vllm_kunlun:v0.0.1`.
 
 ### 3. How vllm-kunlun work with vLLM?
 
-vllm-kunlun is a hardware plugin for vLLM. Basically, the version of vllm-kunlun is the same as the version of vllm. For example, if you use vllm 0.10.1.1, you should use vllm-kunlun 0.10.1.1 as well. For main branch, we will make sure `vllm-kunlun` and `vllm` are compatible by each commit.
+vllm-kunlun is a hardware plugin for vLLM. Basically, the version of vllm-kunlun is the same as the version of vllm. For example, if you use vllm 0.11.0, you should use vllm-kunlun 0.11.0 as well. For main branch, we will make sure `vllm-kunlun` and `vllm` are compatible by each commit.
 
 
 ### 4. How to handle the out-of-memory issue?

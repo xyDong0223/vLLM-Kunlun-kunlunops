@@ -88,24 +88,20 @@ if not os.path.exists(output_dir):  # Step 4: Check if the directory exists
 # dump the mixed data to a jsonl file
 dump_jsonl_data(mixed_data, output_path)  # Step 6: Securely write to the file
 ```
-
 Dataset composition visualization:
-
 ```
 ┌───────────────────────────────────────┐
 │       VL-Test (1000 samples)          │
 ├─────────────────┬─────────────────────┤
 │   PureText      │      Vision         │
-│   (333 samples) │    (667 samples)    │
+│   (333 样本)    │    (667 样本)        │
 ├─────────────────┼─────────────────────┤
 │ • mmlu_pro      │ • math_vista        │
 │ • ifeval        │ • mmmu_pro          │
 │ • gsm8k         │                     │
 └─────────────────┴─────────────────────┘
 ```
-
 #### 3.Test
-
 ```python
 from dotenv import dotenv_values
 
@@ -138,14 +134,13 @@ task_cfg = TaskConfig(
 
 run_task(task_cfg=task_cfg)
 ```
-
 Parameter Tuning Guide:
 
-| Parameter         | Current value | Effect                                   | Adjustment suggestions                                   |
-| ----------------- | ------------- | ---------------------------------------- | -------------------------------------------------------- |
-| `temperature`     | 0.6           | Control output diversity                 | Math problems ↓ 0.3 / Creative writing ↑ 0.9             |
-| `top_p`           | 0.95          | Filtering low-probability tokens         | Reduce "nonsense"                                        |
-| `eval_batch_size` | 5             | Number of requests processed in parallel | With sufficient video memory, it can be increased to 10. |
+| Parameter        | Current value | Effect  | Adjustment suggestions                |
+| ----------------- | ------ | --------------- | ----------------------- |
+| `temperature`     | 0.6    | Control output diversity  | Math problems ↓ 0.3 / Creative writing ↑ 0.9 |
+| `top_p`           | 0.95   | Filtering low-probability tokens | Reduce "nonsense"         |
+| `eval_batch_size` | 5      | Number of requests processed in parallel  | With sufficient video memory, it can be increased to 10.         |
 
 Run the test:
 
@@ -172,12 +167,11 @@ python accuracy.py 2>&1 | tee "$LOG_FILE"
 # ========================================
 EXIT_CODE=${PIPESTATUS[0]}
 if [ $EXIT_CODE -eq 0 ]; then
-    echo "✅ Evaluation completed! Log saved to: $LOG_FILE"
+    echo "✅ 评测完成! 日志已保存到: $LOG_FILE"
 else
-    echo "❌ Evaluation failed! Exit code: $EXIT_CODE Please check the log: $LOG_FILE"
+    echo "❌ 评测失败! 退出码: $EXIT_CODE 请查看日志: $LOG_FILE"
 fi
 ```
-
 #### 4.Common problem fixes
 
 ##### 4.1 NLTK resource missing fix
@@ -187,7 +181,6 @@ Resource punkt_tab not found.
 ```
 
 Solution：
-
 ```python
 import nltk
 import os
@@ -200,13 +193,13 @@ os.makedirs(download_dir, exist_ok=True)
 nltk.data.path.append(download_dir)
 
 # Step 3: Download necessary resources
-print("🔽 Start downloading punkt_tab resource...")
+print("🔽 开始下载punkt_tab资源...")
 try:
     nltk.download("punkt_tab", download_dir=download_dir)
-    print("✅ Download successful!")
+    print("✅ 下载成功!")
 except Exception as e:
-    print(f"❌ Download failed: {e}")
-    print("💡 Alternative: Download manually from GitHub")
+    print(f"❌ 下载失败: {e}")
+    print("💡 备选方案:手动从GitHub下载")
     print(
         "   URL: https://raw.githubusercontent.com/nltk/nltk_data/gh-pages/packages/tokenizers/punkt_tab.zip"
     )

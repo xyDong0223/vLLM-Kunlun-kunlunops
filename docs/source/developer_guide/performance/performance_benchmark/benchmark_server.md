@@ -11,26 +11,30 @@ You can directly use vLLM's CLI benchmark. For more details, please refer to[vLL
 Server startup script reference
 
 ```bash
-USE_ORI_ROPE=1 VLLM_USE_V1=1 python -m vllm.entrypoints.openai.api_server \
+python -m vllm.entrypoints.openai.api_server \
       --host 0.0.0.0 \
-      --port xxxx \
-      --model /xxxx/xxxx/model\
+      --port 8000 \
+      --model /xxxx/xxxx/mkdel\
       --gpu-memory-utilization 0.9 \
       --trust-remote-code \
       --max-model-len 32768 \
       --tensor-parallel-size 1 \
       --dtype float16 \
-      --max_num_seqs 128 \
-      --max_num_batched_tokens 32768 \
-      --max-seq-len-to-capture 32768 \
-      --block-size 128 \
       --no-enable-prefix-caching \
       --no-enable-chunked-prefill \
       --distributed-executor-backend mp \
       --served-model-name modelname \
-      --compilation-config '{"splitting_ops": ["vllm.unified_attention_with_output_kunlun",
-            "vllm.unified_attention", "vllm.unified_attention_with_output",
-            "vllm.mamba_mixer2"]}' \
+      --compilation-config '{"splitting_ops": ["vllm.unified_attention", 
+                                                "vllm.unified_attention_with_output",
+                                                "vllm.unified_attention_with_output_kunlun",
+                                                "vllm.mamba_mixer2", 
+                                                "vllm.mamba_mixer", 
+                                                "vllm.short_conv", 
+                                                "vllm.linear_attention", 
+                                                "vllm.plamo2_mamba_mixer", 
+                                                "vllm.gdn_attention", 
+                                                "vllm.sparse_attn_indexer"]}' \
+
 ```
 
 ##### 1.2Execute test
@@ -124,26 +128,30 @@ The following demonstrates the performance test of the Qwen3-8B in a single-card
 The first step is to start the server. The example script is shown below.
 
 ```bash
-USE_ORI_ROPE=1 VLLM_USE_V1=1 python -m vllm.entrypoints.openai.api_server \
+python -m vllm.entrypoints.openai.api_server \
       --host 0.0.0.0 \
-      --port xxxx \
-      --model /xxxx/xxxx/Qwen3-8B\
+      --port 8000 \
+      --model /models/Qwen3-8B\
       --gpu-memory-utilization 0.9 \
       --trust-remote-code \
       --max-model-len 32768 \
       --tensor-parallel-size 1 \
       --dtype float16 \
-      --max_num_seqs 128 \
-      --max_num_batched_tokens 32768 \
-      --max-seq-len-to-capture 32768 \
-      --block-size 128 \
       --no-enable-prefix-caching \
       --no-enable-chunked-prefill \
       --distributed-executor-backend mp \
-      --served-model-name Qwen3-8B \
-      --compilation-config '{"splitting_ops": ["vllm.unified_attention_with_output_kunlun",
-            "vllm.unified_attention", "vllm.unified_attention_with_output",
-            "vllm.mamba_mixer2"]}' \
+      --served-model-name Qwen3-8B-Instruct \
+      --compilation-config '{"splitting_ops": ["vllm.unified_attention", 
+                                                "vllm.unified_attention_with_output",
+                                                "vllm.unified_attention_with_output_kunlun",
+                                                "vllm.mamba_mixer2", 
+                                                "vllm.mamba_mixer", 
+                                                "vllm.short_conv", 
+                                                "vllm.linear_attention", 
+                                                "vllm.plamo2_mamba_mixer", 
+                                                "vllm.gdn_attention", 
+                                                "vllm.sparse_attn_indexer"]}' \
+
 ```
 
 ##### 2.2 Start EvalScope

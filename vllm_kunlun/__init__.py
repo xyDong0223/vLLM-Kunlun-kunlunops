@@ -1,21 +1,3 @@
-#
-# Copyright (c) 2025 Baidu, Inc. All Rights Reserved.
-# Author: Xinyu Dong
-# Email: dongxinyu03@baidu.com
-# This file is a part of the vllm-kunlun project.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """vllm kunlun init"""
 from .platforms import current_platform
 import sys
@@ -25,26 +7,24 @@ import builtins
 import os
 import time
 import vllm.envs as envs
-
 OLD_IMPORT_HOOK = builtins.__import__
-
-
 def _custom_import(module_name, globals=None, locals=None, fromlist=(), level=0):
     try:
         start_time = time.time()
 
-        # Module mapping table
+        # 模块映射表
         module_mappings = {
             "vllm.model_executor.layers.fused_moe.layer": "vllm_kunlun.ops.fused_moe.layer",
             "vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors_moe": "vllm_kunlun.ops.quantization.compressed_tensors_moe",
             "vllm.compilation.wrapper": "vllm_kunlun.compilation.wrapper",
+            "vllm.v1.worker.gpu_model_runner": "vllm_kunlun.v1.worker.gpu_model_runner"
         }
 
-        # Keep the original imported modules
+        # 需要保持原始导入的模块
         original_imports = [
             "vllm.model_executor.layers.fused_moe.base",
             "vllm.model_executor.layers.fused_moe.config",
-            "vllm.model_executor.layers.fused_moe.layer",
+            "vllm.model_executor.layers.fused_moe.layer"
         ]
 
         if module_name in original_imports:
@@ -55,7 +35,7 @@ def _custom_import(module_name, globals=None, locals=None, fromlist=(), level=0)
                         globals=globals,
                         locals=locals,
                         fromlist=fromlist,
-                        level=level,
+                        level=level
                     )
 
         if module_name in module_mappings:
@@ -68,15 +48,12 @@ def _custom_import(module_name, globals=None, locals=None, fromlist=(), level=0)
             return module
 
         relative_mappings = {
-            (
-                "compressed_tensors_moe",
-                "compressed_tensors",
-            ): "vllm_kunlun.ops.quantization.compressed_tensors_moe",
+            ("compressed_tensors_moe", "compressed_tensors"): "vllm_kunlun.ops.quantization.compressed_tensors_moe",
             ("layer", "fused_moe"): "vllm_kunlun.ops.fused_moe.layer",
         }
 
         if level == 1:
-            parent = globals.get("__package__", "").split(".")[-1] if globals else ""
+            parent = globals.get('__package__', '').split('.')[-1] if globals else ''
             key = (module_name, parent)
             if key in relative_mappings:
                 if module_name in sys.modules:
@@ -91,15 +68,18 @@ def _custom_import(module_name, globals=None, locals=None, fromlist=(), level=0)
         pass
 
     return OLD_IMPORT_HOOK(
-        module_name, globals=globals, locals=locals, fromlist=fromlist, level=level
+        module_name,
+        globals=globals,
+        locals=locals,
+        fromlist=fromlist,
+        level=level
     )
-
 
 def import_hook():
     """Apply import hook for VLLM Kunlun"""
     if not int(os.environ.get("DISABLE_KUNLUN_HOOK", "0")):
         builtins.__import__ = _custom_import
-
+        
         try:
             modules_to_preload = [
                 "vllm_kunlun.ops.quantization.compressed_tensors_moe",
@@ -112,31 +92,39 @@ def import_hook():
         except Exception:
             pass
 
-
 def register():
     """Register the Kunlun platform"""
     from .utils import redirect_output
-    from .vllm_utils_wrapper import (
-        direct_register_custom_op,
-        patch_annotations_for_schema,
-    )
-
+    from .vllm_utils_wrapper import direct_register_custom_op, patch_annotations_for_schema
+    patch_bitsandbytes_loader()
     import_hook()
     if envs.VLLM_USE_V1:
-        patch_V1blockTable()
+        # patch_V1blockTable()
         patch_V1top_p_K()
-        patch_V1penalties()
+        # TODO fixed fast top & k for vLLM 0.10.2,
+        pass
     else:
         patch_sampler()
     return "vllm_kunlun.platforms.kunlun.KunlunPlatform"
 
-
 def register_model():
     """Register models for training and inference"""
     from .models import register_model as _reg
-
     _reg()
 
+# [monkey patach sampler]
+import sys
+import sys, importlib, warnings
+
+def patch_bitsandbytes_loader():
+    try:
+        # 载入你插件里自定义的 direct_register_custom_op 实现
+        custom_utils = importlib.import_module("vllm_kunlun.models.model_loader.bitsandbytes_loader")
+        # 覆盖 vllm.utils
+        sys.modules["vllm.model_executor.model_loader.bitsandbytes_loader"] = custom_utils
+        print("[vllm_kunlun] bitsandbytes_loader patched ->", custom_utils.__file__)
+    except Exception as e:
+        warnings.warn(f"[vllm_kunlun] bitsandbytes_loader patch failed: {e!r}")
 
 def patch_sampler():
     try:
@@ -149,23 +137,11 @@ def patch_sampler():
 
 def patch_V1top_p_K():
     try:
-        custom_sampler = importlib.import_module(
-            "vllm_kunlun.v1.sample.ops.topk_topp_sampler"
-        )
+        custom_sampler = importlib.import_module("vllm_kunlun.v1.sample.ops.topk_topp_sampler")
         sys.modules["vllm.v1.sample.ops.topk_topp_sampler"] = custom_sampler
         print("[vllm_kunlun] V1sampler top p & k patched ->", custom_sampler.__file__)
     except Exception as e:
         warnings.warn(f"[vllm_kunlun] V1 sampler top p & k patch failed: {e!r}")
-
-
-def patch_V1penalties():
-    try:
-        custom_sampler = importlib.import_module("vllm_kunlun.v1.sample.ops.penalties")
-        sys.modules["vllm.v1.sample.ops.penalties"] = custom_sampler
-        print("[vllm_kunlun] V1sampler penalties patched ->", custom_sampler.__file__)
-    except Exception as e:
-        warnings.warn(f"[vllm_kunlun] V1 sampler penalties patch failed: {e!r}")
-
 
 def patch_V1blockTable():
     try:
@@ -175,6 +151,5 @@ def patch_V1blockTable():
     except Exception as e:
         warnings.warn(f"[vllm_kunlun] V1 block table patch failed: {e!r}")
 
-
-# Automatically apply patches when modules are imported
+# 在模块导入时自动应用补丁
 import_hook()
