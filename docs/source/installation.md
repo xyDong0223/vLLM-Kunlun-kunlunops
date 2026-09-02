@@ -1,132 +1,122 @@
 # Installation
 
-This document describes how to install vllm-kunlun manually.
+This document describes how to build and install vLLM-Kunlun manually in the
+Baidu intranet environment.
 
 ## Requirements
 
-- **OS**: Ubuntu 20.04
-- **Software**:
-  - Python >=3.10
-  - PyTorch ≥ 2.5.1
-  - vLLM (same version as vllm-kunlun)
+| Component | Required version or value |
+| --- | --- |
+| Operating system | Ubuntu 20.04 |
+| Python | 3.10 or later |
+| Base image | `iregistry.baidu-int.com/hac_test/aiak-inference-llm:vLLM-Kunlun-Base` |
+| PyTorch | `2.9.0` |
+| vLLM | `0.25.0` |
 
-## Setup environment using container
-We provide clean and minimal base images for your use. Choose the image source
-based on your network:
+## Set up the container environment
 
-- **Public registry**:
-  `wjie520/vllm_kunlun:uv_base`
-- **Internal registry (Baidu intranet only)**:
-  `iregistry.baidu-int.com/hac_test/aiak-inference-llm:vLLM-Kunlun-Base`
-
-Before pulling the image, you can verify that the public tag exists without
-downloading the full image:
-
-```bash
-docker manifest inspect wjie520/vllm_kunlun:uv_base >/dev/null
-```
-
-If the manifest check succeeds but `docker pull` times out, the image tag is
-available and the failure is usually caused by Docker Hub connectivity, proxy, or
-registry mirror configuration. If the manifest check also times out, configure
-your Docker network access first and retry the check. The internal registry is
-only reachable from the Baidu intranet.
+Use the following base image from the Baidu internal registry. The registry and
+image are reachable only from the Baidu intranet.
 
 ### Container startup script
 
-:::::{tab-set}
-:sync-group: install
+Save the following script as `start_docker.sh`, then run
+`bash start_docker.sh <container_name>`.
 
-::::{tab-item} start_docker.sh
-:selected:
-:sync: uv pip
-
-```{code-block} bash
+```bash
 #!/bin/bash
+
 XPU_NUM=8
 DOCKER_DEVICE_CONFIG=""
-if [ $XPU_NUM -gt 0 ]; then
-    for idx in $(seq 0 $((XPU_NUM-1))); do
+if [ "$XPU_NUM" -gt 0 ]; then
+    for idx in $(seq 0 $((XPU_NUM - 1))); do
         DOCKER_DEVICE_CONFIG="${DOCKER_DEVICE_CONFIG} --device=/dev/xpu${idx}:/dev/xpu${idx}"
     done
     DOCKER_DEVICE_CONFIG="${DOCKER_DEVICE_CONFIG} --device=/dev/xpuctrl:/dev/xpuctrl"
 fi
-export build_image="wjie520/vllm_kunlun:uv_base"
-# or export build_image="iregistry.baidu-int.com/hac_test/aiak-inference-llm:vLLM-Kunlun-Base"
+
+export build_image="iregistry.baidu-int.com/hac_test/aiak-inference-llm:vLLM-Kunlun-Base"
 
 docker run -itd ${DOCKER_DEVICE_CONFIG} \
     --net=host \
     --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
     --tmpfs /dev/shm:rw,nosuid,nodev,exec,size=32g \
-    --cap-add=SYS_PTRACE \
     -v /home/users/vllm-kunlun:/home/vllm-kunlun \
     --name "$1" \
     -w /workspace \
     "$build_image" /bin/bash
 ```
 
-::::
-:::::
-## Install vLLM-kunlun
-### Install vLLM
+Enter the running container before continuing:
 
-```{code-block} bash
-:substitutions:
-
-uv pip install vllm==|pip_vllm_version| --no-build-isolation --no-deps
+```bash
+docker exec -it <container_name> /bin/bash
 ```
 
-### Build and Install
-Navigate to the vllm-kunlun directory and build the package:
+## Build and install vLLM-Kunlun
 
-```{code-block} bash
-:substitutions:
+Run the following commands in the container. The sequence installs the required
+PyTorch and vLLM versions, obtains the vLLM-Kunlun source, and builds the
+package from source.
 
-git clone https://github.com/baidu/vLLM-Kunlun
+### Install PyTorch and vLLM
 
+```bash
+uv pip install torch==2.9.0 torchvision torchaudio
+uv pip install vllm==0.25.0 --no-build-isolation --no-deps
+```
+
+### Clone, build, and install vLLM-Kunlun
+
+```bash
+git clone https://github.com/baidu/vLLM-Kunlun.git
 cd vLLM-Kunlun
-
-git checkout |vllm_kunlun_version|
-
 uv pip install -r requirements.txt
-
 python setup.py build
-
 python setup.py install
 ```
 
-### Replace eval_frame.py
-Copy the eval_frame.py patch:
+## Install XPytorch for Torch 2.9.0
 
-```
-cp vllm_kunlun/patches/eval_frame.py "${CONDA_PREFIX:-$VIRTUAL_ENV}"/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py
-```
+After building and installing vLLM-Kunlun, return to the parent directory and
+install the KL3-customized XPytorch package for Python 3.10 and Torch 2.9.0.
+The `sed` command changes the installer to use `uv pip` and the active virtual
+environment variable. Run this command only on a freshly unpacked installer.
 
-### Replace quantization __init__.py
-
-```
-cp vllm_kunlun/quantization/__init__.py "${CONDA_PREFIX:-$VIRTUAL_ENV}"/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/__init__.py
-```
-
-## Choose to download customized xpytorch
-
-### Install the KL3-customized build of PyTorch
-
-```
-wget -O xpytorch-cp310-torch251-ubuntu2004-x64.run https://baidu-kunlun-customer.su.bcebos.com/aiak/qwen3_next/20260226/xpytorch-cp310-torch251-ubuntu2004-x64.run
-bash xpytorch-cp310-torch251-ubuntu2004-x64.run --noexec --target xpytorch_unpack && cd xpytorch_unpack/ && \
-sed -i 's/pip/uv pip/g; s/CONDA_PREFIX/VIRTUAL_ENV/g' setup.sh && bash setup.sh
+```bash
+cd ..
+wget -O xpytorch-cp310-torch290-ubuntu2004-x64.run \
+    https://klx-sdk-release-public.su.bcebos.com/kunlun2jituan/20260806/xpytorch-cp310-torch290-ubuntu2004-x64.run
+bash xpytorch-cp310-torch290-ubuntu2004-x64.run --noexec --target xpytorch_unpack && cd xpytorch_unpack/ && \
+    sed -i 's/pip/uv pip/g; s/CONDA_PREFIX/VIRTUAL_ENV/g' setup.sh && bash setup.sh
 ```
 
-## Applying PyTorch patches
+> **Compatibility note:** `vllm_kunlun/patches/patch_torch251.py` is specific to
+> Torch 2.5.1 and must not be applied in this Torch 2.9.0 environment.
 
+## Optional vLLM-Kunlun patches
+
+If the deployment requires the vLLM-Kunlun patch files, apply them after the
+installation steps above. These commands assume Python 3.10 and an active
+virtual environment.
+
+### Replace `eval_frame.py`
+
+```bash
+cp vllm_kunlun/patches/eval_frame.py \
+    "${CONDA_PREFIX:-$VIRTUAL_ENV}"/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py
 ```
-python vllm_kunlun/patches/patch_torch251.py
+
+### Replace quantization `__init__.py`
+
+```bash
+cp vllm_kunlun/quantization/__init__.py \
+    "${CONDA_PREFIX:-$VIRTUAL_ENV}"/lib/python3.10/site-packages/vllm/model_executor/layers/quantization/__init__.py
 ```
 
 ## Install Kunlun-related packages
 
-```
+```bash
 # Install kunlun_ops
 uv pip install "https://baidu-kunlun-customer.su.bcebos.com/aiak/mimo/20260227/kunlun_ops-0.1.58+ee39020a-cp310-cp310-linux_x86_64.whl"
 
@@ -137,23 +127,18 @@ uv pip install "https://vllm-ai-models.bj.bcebos.com/aiak_share/20260403/xspeedg
 uv pip install "https://vllm-ai-models.bj.bcebos.com/aiak_share/20260403/cocopod-1.1.0-cp310-cp310-linux_x86_64.whl"
 ```
 
-## Quick Start
+## Quick start
 
 ### Set up the environment
 
-```
-chmod +x /workspace/vLLM-Kunlun/setup_env.sh && source /workspace/vLLM-Kunlun/setup_env.sh
+```bash
+chmod +x /workspace/vLLM-Kunlun/setup_env.sh
+source /workspace/vLLM-Kunlun/setup_env.sh
 ```
 
 ### Run the server
-:::::{tab-set}
-:sync-group: install
 
-::::{tab-item} start_service.sh
-:selected:
-:sync: pip
-
-```{code-block} bash
+```bash
 python -m vllm.entrypoints.openai.api_server \
       --host 0.0.0.0 \
       --port 8356 \
@@ -170,8 +155,4 @@ python -m vllm.entrypoints.openai.api_server \
       --no-enable-chunked-prefill \
       --distributed-executor-backend mp \
       --served-model-name Qwen3-VL-30B-A3B-Instruct
-
 ```
-
-::::
-:::::
