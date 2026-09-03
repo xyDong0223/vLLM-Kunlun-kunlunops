@@ -66,4 +66,5 @@ community/governance
 community/contributors
 community/versioning_policy
 community/user_stories/index
+community/weekly_updates
 :::
